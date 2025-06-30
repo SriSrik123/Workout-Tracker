@@ -1,22 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, query, onSnapshot, orderBy, getDocs, deleteDoc, doc, where, setDoc, limit } from 'firebase/firestore';
 import { formatDateToYYYYMMDD } from '../utils/calendarUtils';
+import { parseGeneratedWorkout } from '../utils/workoutParser';
 
 const useWorkoutData = (
-  db, // Passed from App.js (from useFirebase)
-  userId, // Passed from App.js (from useFirebase)
+  db,
+  userId,
   isAuthReady,
   setMessage,
   currentSportType,
-  currentDesiredWorkoutDistance, // Renamed from currentWorkoutIntensity for clarity
-  currentWorkoutFocus, // Renamed from currentPerformanceMetric for clarity
-  currentPerformanceMetric, // NEW: added back the original performanceMetric
+  currentDesiredWorkoutDistance,
+  currentWorkoutFocus,
+  currentPerformanceMetric,
   currentHeartRateResting,
   currentSleepHours,
   currentSleepScore,
   currentEnergyScore,
   preferencesFromApp,
-  parseGeneratedWorkout
+  currentAppId // NEW: Receive currentAppId as a parameter
 ) => {
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -27,17 +28,13 @@ const useWorkoutData = (
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [lastGeneratedMainSportWorkoutDetails, setLastGeneratedMainSportWorkoutDetails] = useState(null);
 
-  // Define currentAppId here, accessible within the hook.
-  // It's still derived from a global/env variable, but now consistently within this hook's scope.
-  // eslint-disable-next-line no-undef
-  const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'my-local-swim-app';
+  // Removed direct __app_id access here. It's now a parameter.
 
 
   const getWorkoutsCollectionRef = useCallback(() => {
     if (!db || !userId) return null;
-    // Use the `currentAppId` defined within the hook
-    return collection(db, `artifacts/${currentAppId}/users/${userId}/swimmingWorkouts`);
-  }, [db, userId, currentAppId]); // db is a stable reference here, ESLint might warn but it's generally fine.
+    return collection(db, `artifacts/${currentAppId}/users/${userId}/swimmingWorkouts`); // Use the parameter
+  }, [db, userId, currentAppId]);
 
 
   // Fetch Workout History (generated workouts) from Firestore
@@ -216,8 +213,9 @@ const useWorkoutData = (
         timestamp: Date.now(),
         date: new Date().toISOString().split('T')[0],
         healthData: {
-            workoutIntensity: currentDesiredWorkoutDistance, // Use correct parameter name
-            performanceMetric: currentPerformanceMetric, // Use correct parameter name
+            desiredWorkoutDistance: currentDesiredWorkoutDistance,
+            workoutFocus: currentWorkoutFocus,
+            performanceMetric: currentPerformanceMetric,
             heartRateResting: currentHeartRateResting,
             sleepHours: currentSleepHours,
             sleepScore: currentSleepScore,
@@ -232,7 +230,8 @@ const useWorkoutData = (
             liftingGoal: preferencesFromApp.liftingGoal,
             equipment: preferencesFromApp.equipment,
             desiredWorkoutDistance: preferencesFromApp.desiredWorkoutDistance,
-            workoutFocus: preferencesFromApp.workoutFocus
+            workoutFocus: preferencesFromApp.workoutFocus,
+            trackerBrand: preferencesFromApp.trackerBrand
         }
       };
 
@@ -259,11 +258,12 @@ const useWorkoutData = (
     } finally {
       setTrackerLoading(false);
     }
-  }, [ // <= This is the dependency array
-      getWorkoutsCollectionRef, userId, setMessage, parseGeneratedWorkout,
-      currentDesiredWorkoutDistance, currentPerformanceMetric, currentHeartRateResting,
+  }, [
+      getWorkoutsCollectionRef, userId, setMessage, // parseGeneratedWorkout is correctly imported
+      currentDesiredWorkoutDistance, currentWorkoutFocus, currentPerformanceMetric, currentHeartRateResting,
       currentSleepHours, currentSleepScore, currentEnergyScore, preferencesFromApp
   ]);
+
 
   // Add a manually tracked workout
   const addTrackedWorkout = useCallback(async (workoutData) => {

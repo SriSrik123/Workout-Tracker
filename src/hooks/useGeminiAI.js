@@ -9,9 +9,9 @@ const useGeminiAI = (
   workoutDuration,
   liftingGoal,
   equipment,
-  desiredWorkoutDistance, // <-- Corrected: Ensure this is a parameter
-  workoutFocus,           // <-- Corrected: Ensure this is a parameter
-  performanceMetric,      // <-- Corrected: Ensure this is a parameter
+  desiredWorkoutDistance,
+  workoutFocus,
+  performanceMetric,
   heartRateResting,
   sleepHours,
   sleepScore,

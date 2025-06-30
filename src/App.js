@@ -19,7 +19,7 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState('designer');
 
   // Firebase Hooks
-  const { db, userId, isAuthReady } = useFirebase(setMessage);
+  const { db, userId, isAuthReady, currentAppId } = useFirebase(setMessage); // NEW: Destructure currentAppId here
 
   // Profile Settings States (Managed here and passed to Settings component)
   const [sportType, setSportType] = useState('Swimming');
@@ -28,7 +28,7 @@ const App = () => {
   const [daysPerWeek, setDaysPerWeek] = useState(3);
   const [workoutDuration, setWorkoutDuration] = useState(45);
   const [liftingGoal, setLiftingGoal] = useState('None');
-  const [trackerBrand, setTrackerBrand] = useState('No Watch'); // NEW STATE
+  const [trackerBrand, setTrackerBrand] = useState('No Watch');
   const [equipment, setEquipment] = useState({
     swimGoggles: false, swimCap: false, kickboard: false, shortFins: false, longFins: false, paddle: false, buoy: false, snorkel: false, parachutes: false,
     runningShoes: false, gpsWatch: false, hydrationVest: false,
@@ -50,14 +50,14 @@ const App = () => {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   // --- ORDER OF HOOK CALLS MATTERS HERE ---
-  // Workout Data Hook needs to be called BEFORE Gemini AI hook to provide lastGeneratedMainSportWorkoutDetails
+  // Workout Data Hook is called FIRST because useGeminiAI needs its output (lastGeneratedMainSportWorkoutDetails)
   const {
     workoutHistory, historyLoading,
     calendarWorkouts, dailyWorkouts,
     journalEntry, setJournalEntry,
     trackerLoading,
     selectedDate, setSelectedDate,
-    lastGeneratedMainSportWorkoutDetails, // Now consumed here from useWorkoutData
+    lastGeneratedMainSportWorkoutDetails, // Destructure here
     fetchCalendarData,
     saveGeneratedWorkout, addTrackedWorkout, saveJournalEntry, deleteWorkout,
     clearGeneratedHistory
@@ -66,35 +66,30 @@ const App = () => {
     userId,
     isAuthReady,
     setMessage,
-    sportType, // currentSportType
-    desiredWorkoutDistance, // currentDesiredWorkoutDistance
-    workoutFocus, // currentWorkoutFocus
-    performanceMetric, // currentPerformanceMetric
-    heartRateResting, // currentHeartRateResting
-    sleepHours, // currentSleepHours
-    sleepScore, // currentSleepScore
-    energyScore, // currentEnergyScore
-    { // preferencesFromApp object to consolidate profile and daily Settings for saving
+    sportType,
+    desiredWorkoutDistance,
+    workoutFocus,
+    performanceMetric, // Pass performanceMetric to useWorkoutData
+    heartRateResting,
+    sleepHours,
+    sleepScore,
+    energyScore,
+    { // preferencesFromApp object
         sportType, sportGoal, sportLevel, daysPerWeek, workoutDuration, liftingGoal, equipment,
-        desiredWorkoutDistance, workoutFocus, trackerBrand // Pass trackerBrand here
+        desiredWorkoutDistance, workoutFocus, trackerBrand
     },
-    // The parseGeneratedWorkout function is not passed here directly as a dependency,
-    // but rather used internally by useWorkoutData.
-    // We should pass the function itself as an argument to useWorkoutData if it needs it.
-    // However, looking at useWorkoutData, `parseGeneratedWorkout` is directly imported,
-    // so it doesn't need to be passed as a hook parameter.
+    currentAppId // NEW: Pass currentAppId to useWorkoutData
   );
 
 
-  // Gemini AI Hook
+  // Gemini AI Hook is called SECOND, using output from useWorkoutData
   const {
     generatedWorkout, setGeneratedWorkout, loading, generateWorkout,
     userQuestion, setUserQuestion, aiAnswer, aiQALoading, askAiAboutWorkout,
-    //parseGeneratedWorkout 
   } = useGeminiAI(
     sportType, sportGoal, sportLevel, daysPerWeek, workoutDuration, liftingGoal, equipment,
     desiredWorkoutDistance, workoutFocus, performanceMetric, heartRateResting, sleepHours, sleepScore, energyScore,
-    lastGeneratedMainSportWorkoutDetails, // Pass last workout details to AI hook
+    lastGeneratedMainSportWorkoutDetails, // NEW: Pass last workout details to AI hook
     setMessage
   );
 
@@ -157,10 +152,6 @@ const App = () => {
 
   // Function to save the current (generated) workout to Firestore History & Calendar
   const handleSaveCurrentGeneratedWorkout = async () => {
-    // This is where parseGeneratedWorkout is truly needed if `saveGeneratedWorkout`
-    // within useWorkoutData does NOT directly import parseGeneratedWorkout.
-    // If useWorkoutData imports it directly, we don't need to pass it here.
-    // Given the previous setup, useWorkoutData *does* import it directly.
     await saveGeneratedWorkout(generatedWorkout);
     setGeneratedWorkout('');
     setCurrentPage('tracker');
@@ -184,7 +175,7 @@ const App = () => {
             loading={loading}
             isAuthReady={isAuthReady}
             sportType={sportType}
-            trackerBrand={trackerBrand} // NEW: Pass trackerBrand to DesignerPage
+            trackerBrand={trackerBrand}
           />
         );
       case 'currentWorkout':
@@ -214,7 +205,7 @@ const App = () => {
         return (
           <TrackerPage
             currentMonth={currentMonth} setCurrentMonth={setCurrentMonth}
-            currentYear={currentYear} setCurrentYear={setCurrentYear}
+            currentYear={currentYear} setCurrentYear={currentYear}
             calendarWorkouts={calendarWorkouts}
             selectedDate={selectedDate} setSelectedDate={setSelectedDate}
             goToPreviousMonth={goToPreviousMonth} goToNextMonth={goToNextMonth}
@@ -233,7 +224,7 @@ const App = () => {
             currentPrimarySportType={sportType}
           />
         );
-      case 'Settings':
+      case 'settings':
         return (
           <Settings
             sportType={sportType} setSportType={setSportType}
@@ -242,7 +233,7 @@ const App = () => {
             daysPerWeek={daysPerWeek} setDaysPerWeek={setDaysPerWeek}
             workoutDuration={workoutDuration} setWorkoutDuration={setWorkoutDuration}
             liftingGoal={liftingGoal} setLiftingGoal={setLiftingGoal}
-            trackerBrand={trackerBrand} setTrackerBrand={setTrackerBrand} // NEW: Pass trackerBrand to Settings
+            trackerBrand={trackerBrand} setTrackerBrand={setTrackerBrand}
             equipment={equipment} setEquipment={setEquipment}
           />
         );
@@ -298,10 +289,10 @@ const App = () => {
             Workout Calendar
           </button>
           <button
-            onClick={() => setCurrentPage('Settings')}
+            onClick={() => setCurrentPage('settings')}
             className={`py-2.5 px-6 rounded-full font-semibold text-base sm:text-lg shadow-md transform transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-300
-                       ${currentPage === 'Settings' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-indigo-100'}`}
-            aria-current={currentPage === 'Settings' ? 'page' : undefined}
+                       ${currentPage === 'settings' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-indigo-100'}`}
+            aria-current={currentPage === 'settings' ? 'page' : undefined}
           >
             Settings
           </button>

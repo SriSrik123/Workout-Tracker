@@ -18,6 +18,10 @@ const useFirebase = (setMessage) => {
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  // Directly derive currentAppId from firebaseConfig.appId or provide a simple fallback
+  // This resolves the '__app_id' no-undef error
+  const currentAppId = firebaseConfig.appId || 'my-local-swim-app'; // Use appId from config or a default
+
   useEffect(() => {
     try {
       if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
@@ -38,14 +42,13 @@ const useFirebase = (setMessage) => {
           setUserId(user.uid);
         } else {
           try {
-            // eslint-disable-next-line no-undef
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            if (initialAuthToken) {
-                // eslint-disable-next-line no-undef
-                await signInWithCustomToken(firebaseAuth, initialAuthToken);
-            } else {
-                await signInAnonymously(firebaseAuth);
-            }
+            // Remove direct access to __initial_auth_token as a global.
+            // If you intend to use a custom initial token, it should be passed as a prop
+            // or derived from a secure environment variable (e.g., process.env.REACT_APP_INITIAL_AUTH_TOKEN).
+            // For now, we'll assume anonymous sign-in is the primary fallback.
+            // If __initial_auth_token was crucial for a custom auth flow, that logic needs to be explicitly integrated.
+            // For typical CRA setups, it's not a common pattern.
+            await signInAnonymously(firebaseAuth); // Rely on anonymous sign-in
           } catch (error) {
             console.error("Error during anonymous sign-in:", error);
             if (error.code === 'auth/configuration-not-found') {
@@ -65,9 +68,9 @@ const useFirebase = (setMessage) => {
       console.error("Error initializing Firebase:", error);
       setMessage({ text: `Firebase initialization error: ${error.message}`, type: 'error' });
     }
-  }, [setMessage]); // Depend on setMessage to avoid stale closures
+  }, [setMessage]);
 
-  return { db, auth, userId, isAuthReady };
+  return { db, auth, userId, isAuthReady, currentAppId };
 };
 
 export default useFirebase;
