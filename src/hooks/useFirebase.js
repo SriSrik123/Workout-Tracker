@@ -4,12 +4,12 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDFsAE2K-wW1FVsyGB0LJ20dXyDvo_EbFs",
-  authDomain: "swim-workout-app.firebaseapp.com",
-  projectId: "swim-workout-app",
-  storageBucket: "swim-workout-app.firebasestorage.app",
-  messagingSenderId: "134609329868",
-  appId: "1:134609329868:web:a13c37fe423d1531016c69"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
 const useFirebase = (setMessage) => {
